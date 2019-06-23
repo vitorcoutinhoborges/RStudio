@@ -1,0 +1,437 @@
+---
+title: "Resultados das Análises em R"
+author: Angelo Bastos e Vítor Borges
+header-includes:
+   - \setlength\parindent{24pt}
+output: word_document
+---
+
+```{r preparativos, include = FALSE}
+##############
+# Libraries: #
+##############
+# Vetor com os packages utilizados:
+packages <- c("ggplot2", "knitr", "rmarkdown", "readxl", "data.table", "dplyr", "tidyr", "kableExtra", "jtools")
+
+# Verificando se os packages estão instalados e os instalando caso não estejam:
+for (i in 1:length(packages)){
+  requer <- paste("require(", packages[i], ")")
+  
+  if(!eval(parse(text = requer))){
+    install.packages(packages[i])
+  }
+  
+  eval(parse(text = requer))
+}
+
+############
+# Imports: #
+############
+# Criando bases com Ph e Organolépticas por Tratamento, a partir dos dados da base da Clarissa:
+banco_buriti = data.frame(Dia = c("D1", "D7", "D15", "D30", "D60", "D90"),
+                         Ph = c(5, 5, 5, 6, 6, 6),
+                         Cor = rep("Amarelo", 6),
+                         Odor = rep("Buriti", 6),
+                         Aspecto = c(rep("CB", 5), "CO"))
+
+banco_base = data.frame(Dia = c("D1", "D7", "D15", "D30", "D60", "D90"),
+                         Ph = c(5, 5, 5, 6, 6, 6),
+                         Cor = rep("Branco", 6),
+                         Odor = rep("Sem Cheiro", 6),
+                         Aspecto = c(rep("CB", 6)))
+
+# Importando base com variáveis de massa e espalhabilidade:
+banco_massas <- readxl::read_excel("C:/Users/Vitorborges/Desktop/GetRich/2B/Clarissa Borges/Base_Massas.xlsx", 
+                                  sheet = "Plan1")
+
+##############
+# Variáveis: #
+##############
+# Criando vetores com valores necessários para a iteração a seguir:
+#   - Sempre mantendo a ordem "Buriti por Dia, Base por Dia" nos vetores.
+percentuais_originais <- c(1.24, 2.75, 1.50, 1.74, 1.19, 0.12,
+                           1.31, 3.82, 0.24, 1.23, 0.84, 1.25,
+                           1.42, 1.71, 0.11, 0.84, 1.72, 0.99,
+                           0.19, 0, 0, 0.21, 0, 0,
+                           0.19, 0, 0, 1.80, 0.24, 0.46,
+                           2.30, 2.86, 1.11, 1.43, 3.11, 0.60)
+
+espalhabilidades_originais <- c(11779.90625,	8654.625,	7462.40625,
+                                7850,	8654.625,	7850,
+                                7850,	8247.40625,	9498.5,
+                                8247.40625,	7084.625,	9071.65625,
+                                11304,	9071.65625,	11304,
+                                8654.625,	10837.90625,	13266.5,
+                                10381.625,	11304,	11779.90625,
+                                10381.625,	9071.6565,	9498.5,
+                                7850,	10381.625,	8654.625,
+                                9071.65625,	9071.65625,	9498.5,
+                                11304,	8247.40625,	8247.40625,
+                                10837.90625,	7850,	9071.65625)
+
+sds_espalhabilidade <- c(2229.707555, 464.5504603, 860.3022288, 998.3103631, 1288.844265, 2307.024622,
+                         710.9210989, 668.0972333, 1293.514304, 246.438354, 1764.725224, 1502.202096)
+
+# Iteração para calcular os valores das variáveis novas:
+rep = 0
+
+for(i in seq(1, 36, 3)){
+  # Criando variáveis vazias na base banco_massas:
+  if(i == 1){
+    banco_massas$`Mean_Massa` <- NA
+    banco_massas$`SD_Massa` <- NA
+    banco_massas$`Median_Massa` <- NA
+    banco_massas$`Var_Massa` <- NA
+    banco_massas$`Coef_Var_Massa` <- NA
+    
+    banco_massas$`Mean_Espalhabilidade` <- NA
+    banco_massas$`SD_Espalhabilidade` <- NA
+    banco_massas$`Median_Espalhabilidade` <- NA
+    banco_massas$`Var_Espalhabilidade` <- NA
+    banco_massas$`Coef_Var_Espalhabilidade` <- NA
+  }
+  
+  # Descritivas para massa:
+  banco_massas$`Mean_Massa`[i - (2*rep)] <- mean(c(percentuais_originais[i]/100, percentuais_originais[i+1]/100, percentuais_originais[i+2]/100))
+  banco_massas$`SD_Massa`[i - 2*rep] <- sd(c(percentuais_originais[i]/100, percentuais_originais[i+1]/100, percentuais_originais[i+2]/100))
+  banco_massas$`Median_Massa`[i - (2*rep)] <- median(c(percentuais_originais[i]/100, percentuais_originais[i+1]/100, percentuais_originais[i+2]/100))
+  banco_massas$`Var_Massa`[i - (2*rep)] <- var(c(percentuais_originais[i]/100, percentuais_originais[i+1]/100, percentuais_originais[i+2]/100))
+  banco_massas$`Coef_Var_Massa`[i - (2*rep)] <- sd(c(percentuais_originais[i]/100, percentuais_originais[i+1]/100, percentuais_originais[i+2]/100)) /
+                                                mean(c(percentuais_originais[i]/100, percentuais_originais[i+1]/100, percentuais_originais[i+2]/100))
+
+  # Descritivas para espalhabilidade:
+  banco_massas$`Mean_Espalhabilidade`[i - (2*rep)] <- mean(c(espalhabilidades_originais[i], espalhabilidades_originais[i+1], espalhabilidades_originais[i+2]))
+  banco_massas$`SD_Espalhabilidade`[i - (2*rep)] <- median(c(espalhabilidades_originais[i], espalhabilidades_originais[i+1], espalhabilidades_originais[i+2]))
+  banco_massas$`Median_Espalhabilidade`[i - (2*rep)] <- sd(c(espalhabilidades_originais[i], espalhabilidades_originais[i+1], espalhabilidades_originais[i+2]))
+  banco_massas$`Var_Espalhabilidade`[i - (2*rep)] <- var(c(espalhabilidades_originais[i], espalhabilidades_originais[i+1], espalhabilidades_originais[i+2]))
+  banco_massas$`Coef_Var_Espalhabilidade`[i - (2*rep)] <- sd(c(espalhabilidades_originais[i], espalhabilidades_originais[i+1], espalhabilidades_originais[i+2])) /
+                                                          mean(c(espalhabilidades_originais[i], espalhabilidades_originais[i+1], espalhabilidades_originais[i+2]))
+  
+  # Aumentando o índice da iteração:
+  rep = rep + 1
+}
+
+# Separando a base em duas, uma somente com Buriti e uma somente com Base:
+prelim_buriti <- banco_massas[which(banco_massas$Tratamento == 'Buriti'), ]
+prelim_base <- banco_massas[which(banco_massas$Tratamento == 'Base'), ]
+```
+
+# 1 - Análises Descritivas:
+
+## 1.1 - Variáveis Relacionadas às Características Organolépticas: 
+Para avaliar-se a variação de __Ph__, __Cor__, __Aspecto__ e __Odor__ durante o período do experimento, foram tabulados os valores observados.
+
+### Creme Buriti: 
+
+```{r tabela_1, echo = FALSE}
+kable(banco_buriti,
+      format = "markdown",
+      align = "c")
+```
+
+### Creme Base:
+
+```{r tabela_2, echo = FALSE}
+kable(banco_base,
+      format = "markdown",
+      align = "c")
+```
+
+## 1.2 - Variáveis de Massa:
+
+Com relação às triplicatas de __massa__ e __espalhabilidade__, pode-se analisar o comportamento amostral por meio de algumas estatísticas descritivas, tabuladas abaixo.
+
+```{r massas_1, echo = FALSE}
+# Table 1 - Massa (por Buriti e Base):
+desc_massa_buriti <- data.frame("Dia" = c("D1", "D7", "D15", "D30", "D60", "D90"),
+                                "Média" = paste(round(prelim_buriti$`Mean_Massa`*100, digits = 2), "%"),
+                                "Mediana" = paste(round(prelim_buriti$`Median_Massa`*100, digits = 2), "%"),
+                                "Desvio Padrão" = paste(round(prelim_buriti$`SD_Massa`*100, digits = 2), "%"),
+                                "Variância" = paste(round(prelim_buriti$`Var_Massa`*100, digits = 2), "%"),
+                                "Coeficiente de Variação" = prelim_buriti$`Coef_Var_Massa`*100)
+
+desc_massa_base <- data.frame("Dia" = c("D1", "D7", "D15", "D30", "D60", "D90"),
+                              "Média" = paste(round(prelim_base$`Mean_Massa`*100, digits = 2), "%"),
+                              "Mediana" = paste(round(prelim_base$`Median_Massa`*100, digits = 2), "%"),
+                              "Desvio Padrão" = paste(round(prelim_base$`SD_Massa`*100, digits = 2), "%"),
+                              "Variância" = paste(round(prelim_base$`Var_Massa`*100, digits = 2), "%"),
+                              "Coeficiente de Variação" = prelim_base$`Coef_Var_Massa`*100)
+
+# Table 2 - Espalhabilidade (por Buriti e Base):
+desc_esp_buriti <- data.frame("Dia" = c("D1", "D7", "D15", "D30", "D60", "D90"),
+                              "Média" = prelim_buriti$`Mean_Espalhabilidade`,
+                              "Mediana" = prelim_buriti$`Median_Espalhabilidade`,
+                              "Desvio Padrão" = prelim_buriti$`SD_Espalhabilidade`,
+                              "Variância" = prelim_buriti$`Var_Espalhabilidade`,
+                              "Coeficiente de Variação" = prelim_buriti$`Coef_Var_Espalhabilidade`)
+
+desc_esp_base <- data.frame("Dia" = c("D1", "D7", "D15", "D30", "D60", "D90"),
+                            "Média" = prelim_base$`Mean_Espalhabilidade`,
+                            "Mediana" = prelim_base$`Median_Espalhabilidade`,
+                            "Desvio Padrão" = prelim_base$`SD_Espalhabilidade`,
+                            "Variância" = prelim_base$`Var_Espalhabilidade`,
+                            "Coeficiente de Variação" = prelim_base$`Coef_Var_Espalhabilidade`)
+```
+
+### Creme Buriti:
+
+```{r tabela_3, echo = FALSE}
+kable(desc_massa_buriti,
+      align = 'c',
+      digits = 2,
+      format = "markdown",
+      col.names = c("Dia", "Média", "Mediana", "Desvio Padrão", "Variância", "Coeficiente de Variação"))
+```
+
+### Creme Base:
+
+```{r tabela_4, echo = FALSE}
+options(knitr.kable.NA = '0')
+
+kable(desc_massa_base,
+      align = 'c',
+      digits = 2,
+      format = "markdown",
+      col.names = c("Dia", "Média", "Mediana", "Desvio Padrão", "Variância", "Coeficiente de Variação"))
+```
+
+## 1.3 - Variáveis de Espalhabilidade:
+
+### Creme Buriti:
+
+```{r tabela_5, echo = FALSE}
+kable(desc_esp_buriti,
+      align = 'c',
+      digits = 2,
+      format = "markdown",
+      col.names = c("Dia", "Média", "Mediana", "Desvio Padrão", "Variância", "Coeficiente de Variação"))
+```
+
+### Creme Base:
+
+```{r tabela_6, echo = FALSE}
+kable(desc_esp_base,
+      align = 'c',
+      digits = 2,
+      format = "markdown",
+      col.names = c("Dia", "Média", "Mediana", "Desvio Padrão", "Variância", "Coeficiente de Variação"))
+```
+
+## 1.4 - Gráficos de Massa e Espalhabilidade:
+
+Abaixo, o gráfico de barras representa a média da diminuição percentual da massa no dia e as linhas representam intervalos de confiança de ±1 desvio-padrão amostral. O valor acima dos intervalos de confiança é o valor calculado (arredondado) do desvio-padrão das três repetições realizadas no dia.
+
+
+```{r grafico_1, echo = FALSE}
+# Gráfico de Barras - Espalhabilidade Média com IC:
+ggplot(banco_massas, 
+       aes(x = c(1:length(banco_massas$Mean_Espalhabilidade)), 
+           y = banco_massas$Mean_Espalhabilidade, 
+           group = Tratamento, 
+           color = Tratamento)) +
+       geom_point() +
+       geom_col() +
+       geom_errorbar(aes(ymin = ifelse(banco_massas$Mean_Espalhabilidade - banco_massas$SD_Espalhabilidade > 0,
+                                       banco_massas$Mean_Espalhabilidade - banco_massas$SD_Espalhabilidade,
+                                       0)),
+                         ymax = banco_massas$Mean_Espalhabilidade + banco_massas$SD_Espalhabilidade) +
+       scale_x_discrete(limits = c(1:12), 
+                        labels = banco_massas$Dia) +
+       geom_text(aes(label = round(banco_massas$Mean_Espalhabilidade, digits = 0), 
+                     y = banco_massas$Mean_Espalhabilidade + banco_massas$SD_Espalhabilidade + 500),
+                     size = 3) +
+       ylab("Espalhabilidade Média") +
+       xlab("Dia") +
+       ggtitle("Média da Espalhabilidade por Dia")
+```
+
+
+Como fizemos para massa, o gráfico de barras abaixo representa a média da espalhabilidade observada no dia e as linhas representam intervalos de confiança de ±1 desvio-padrão amostral. O valor acima dos intervalos de confiança é o valor calculado (arredondado) do desvio-padrão das três repetições realizadas no dia.
+
+```{r grafico_2, echo = FALSE}
+# Gráfico de Barras - Diminuição Média da Massa (%) com IC:
+ggplot(banco_massas, 
+       aes(x = c(1:length(banco_massas$Mean_Massa)), 
+           y = banco_massas$Mean_Massa, 
+           group = Tratamento, 
+           color = Tratamento)) +
+       geom_point() +
+       geom_col() +
+       geom_errorbar(aes(ymin = ifelse(banco_massas$Mean_Massa - banco_massas$SD_Massa > 0,
+                                       banco_massas$Mean_Massa - banco_massas$SD_Massa,
+                                       0)),
+                         ymax = banco_massas$Mean_Massa + banco_massas$SD_Massa) +
+       scale_x_discrete(limits = c(1:12), 
+                        labels = banco_massas$Dia) +
+       geom_text(aes(label = round(banco_massas$Mean_Massa, digits = 3), 
+                     y = banco_massas$Mean_Massa + banco_massas$SD_Massa + 0.00078125),
+                     size = 3) +
+       ylab("Diminuição Média de Massa (%)") +
+       xlab("Dia") +
+       ggtitle("Diminuição Percentual Média da Massa por Dia")
+```
+
+\newpage
+
+
+# 2 - Modelos Lineares:
+
+Testamos um modelos de regressão linear para verificar se havia alguma correlação estatisticamente significativa entre a espalhabilidade média e a diminuição percentual diária da massa de cada creme.
+
+## 2.1 - Gráficos:
+
+
+```{r grafico_3, echo = FALSE}
+# Gráfico de Dispersão - Espalhabilidade Média por Diminuição Média da Massa (%):
+ggplot(prelim_buriti, 
+       aes(y = log(Mean_Espalhabilidade), 
+           x = Mean_Massa)) +
+       geom_point() +
+       geom_smooth(method = "lm") +
+       xlab("Diminuição Percentual da Massa") +
+       ylab("Espalhabilidade") +
+       ggtitle("Espalhabilidade por Diminuição Percentual da Massa - Creme Buriti")
+```
+
+```{r teste, echo = FALSE}
+ggplot(prelim_base, 
+       aes(y = log(Mean_Espalhabilidade), 
+           x = Mean_Massa)) +
+       geom_point() + 
+       geom_smooth(method = "lm") +
+       xlab("Diminuição Percentual da Massa") +
+       ylab("Espalhabilidade") +
+       ggtitle("Espalhabilidade por Diminuição Percentual da Massa - Creme Base")
+```
+
+\newpage
+
+## 2.2 - Definições:
+
+Para melhor compreensão das interpretações a que chegamos com as análises apresentadas a seguir, abaixo se encontram algumas definições importantes:
+
+
+> __R-Squared ($R^2$):__ Representa a magnitude da influência da variável explicativa (no nosso caso, __massa__) sobre a variável resposta (__espalhabilidade__), e pode variar entre __0 e 1__. O utilizamos para estimar a qualidade do ajuste do modelo, sendo que o interpretamos (em valor percentual) como a quantia da variação de __espalhabilidade__ que é explicada pela variação de __massa__.
+
+> __Teste de Hipóteses:__ Para testarmos hipóteses estatísticas, utilizamos testes de hipóteses. Neste método de análise, é comparado o valor calculado para a estatística do teste com um valor mínimo significativo - geralmente tabulado - escolhido com base no poder (que geralmente é 80%) e nível de significância (geralmente 5%) desejados para o teste.
+
+> __P-Valor:__ O p-valor é uma probabilidade utilizada para interpretar a significância dos testes de hipóteses. Quando ele é menor que o nível de significância escolhido, pode-se dizer que há evidência estatística para rejeitar a hipótese nula do teste, que em geral é o que procuramos.
+
+> __Estatística F:__ É a estatística do Teste F. Considerando o modelo de regressão linear simples utilizado para modelar a relação entre __massa__ e __espalhabilidade__, a Estatística F nos ajuda a avaliar a hipótese a ser testada, que pode ser interpretada como sendo a existência de correlação linear significativa entre as variáveis. Ainda neste contexto, para o Teste F um p-valor significativo ($\le 0.05$ para 95% de confiança no teste) indica que há alguma correlação linear significativa.
+
+> __Coeficientes do Modelo:__ Uma reta de regressão linear simples tem a forma $Y = \beta_{0} + \beta_{1}X$, em que os betas ($\beta$) são os coeficientes do modelo e, no nosso caso, Y é a __espalhabilidade__ e X é a __massa__. O $\beta_{0}$ representa o intercepto, valor estimado para Y quando X é igual a zero; e  o $\beta_{1}$ representa a variação de Y para cada unidade de variação de X.
+
+\newpage
+
+## 2.3 - Resultados dos Modelos:
+
+```{r modelos, echo = FALSE}
+# Modelo Linear da Espalhabilidade Média por Diminuição Média da Massa (%):
+aj_buriti_1 <- lm(Mean_Espalhabilidade ~ Mean_Massa, prelim_buriti)
+aj_base_1 <- lm(Mean_Espalhabilidade ~ Mean_Massa, prelim_base)
+```
+
+Para ambos os modelos, o valor mínimo de significância para a Estatística F era de 7.71 (de acordo com a Tabela da Distribuição F a 5% de Significância), portanto nenhum deles indicou correlação linear significativa entre as variáveis. Além disso, os p-valores também não indicaram significância para os $\beta_{1}$ e os $R^2$ indicaram que 1% da variação da espalhabilidade é explicada pela diminuição percentual da massa para o creme Buriti, e 16% para o creme Base.
+
+No caso do experimento realizado, não tendo encontrado significâncias estatísticas para as retas de correlação, indicamos que sejam apresentados e interpretados os gráficos de dispersão __sem__ as retas de regressão, para que seja debatido o problema que ocorreu no equipamento e isto seja relacionado com a alta variação dos pontos em termos de percentual de massa; e em seguida podem ser apresentados os gráficos com as retas, indicando, a partir dos dados das tabelas abaixo (interpretados no parágrafo anterior), que não houve significância.  
+
+### Creme Buriti:
+
+```{r tabela_7, echo = FALSE}
+kable(summ(aj_buriti_1)$coeftable, digits =  2, format = "markdown", align = "c")
+```
+
+### Creme Base:
+
+```{r tabela_8, echo = FALSE}
+kable(summ(aj_base_1)$coeftable, digits =  2, format = "markdown", align = "c")
+```
+
+##Análise de DPPH:
+
+```{r tabela_9, echo = FALSE}
+dpph = data.frame(Dia = c("D1","D90" ,"D1", "D90"),
+                   EC50= c(0.028, 0.030, 0.028, 0.028),
+                  Tratamento = c(rep("Base", 2), rep("Buriti", 2)))
+ggplot(dpph, 
+       aes(x = c(1:length(dpph$Dia)), 
+           y = dpph$EC50,
+           group = Tratamento, 
+           color = Tratamento
+          )) +
+       geom_point() +
+       geom_col() +
+  scale_x_discrete(limits = c(1:4), 
+                        labels = dpph$Dia) +
+  ylab("Valor de EC50") +
+       xlab("Dia") +
+       ggtitle("Variação do valor de EC50 em 90 dias")
+```
+
+##Teste Binomial para Variáveis Organolépticas
+
+Foi realizado um tesste Binomial unilateral para avaliar as características organolépticas.
+
+Para a variável "Cor" atribuímos como sucesso as observações que eram "Cor Buriti", para o creme Buriti
+e "Branca" para o Creme Base. Foi atribuuído como fracasso caso outra cor fosse identificada.
+
+Para a variável "Odor" foi atribuído como sucesso as observações com "Buriti" (para o creme Buriti)
+e "Sem Cheiro" (para o creme Base).
+
+Para a variável "Aspecto" foi atribuído como sucesso as observações com "Cor Brilhante (CB)", para os dois cremes.
+
+Foi tomado o valor de referência de 80% para estes testes, sendo que o p-valor indicará se a probabilidade de obter sucesso em uma observação é significativamente diferente do valor de referência escolhido. Também foi gerado um intervalo de confiança para a probabilidade de obter-se um sucesso com base nas observações
+
+```{r tabela_10, echo = FALSE}
+##Realizando teste Binomial para Cor usando p=0.8
+binom.test(6, 6, p=0.8, alternative = "g", conf.level = 0.95)
+
+##Realizando teste Binomial para Cor usando p=0.5
+binom.test(6, 6, p=0.5, alternative = "g", conf.level = 0.95)
+
+##Realizando teste Binomial para Odor usando p=0.8
+binom.test(6, 6, p=0.8, alternative = "g", conf.level = 0.95)
+
+##Realizando teste Binomial para Odor usando p=0.5
+binom.test(6, 6, p=0.5, alternative = "g", conf.level = 0.95)
+
+##Realizando teste Binomial para Aspecto usando p=0.8
+binom.test(5, 6, p=0.8, alternative = "g", conf.level = 0.95)
+
+##Realizando teste Binomial para Aspecto usando p=0.5
+binom.test(5, 6, p=0.5, alternative = "g", conf.level = 0.95)
+
+#Gráfico para o p-valor para as variáveis que não tiveram mudança nos 90 dias (Cor e Odor)
+teste <- vector(length = 100L)
+it = 1
+
+for(i in seq(0, 1, 0.01)){
+  teste[it] <- binom.test(c(6, 0), 
+                          p = i,
+                          alternative = "g",
+                          conf.level = 0.95)$p.value
+  it <- it+1
+}
+
+plot(teste)
+
+#Gráfico para o p-valor para a variável Aspecto
+teste_2 <- vector(length = 100L)
+it = 1
+
+for(i in seq(0, 1, 0.01)){
+  teste_2[it] <- binom.test(c(5, 1), 
+                          p = i,
+                          alternative = "g",
+                          conf.level = 0.95)$p.value
+  it <- it+1
+}
+
+plot(teste_2)
+```
+
+Os gráficos acima mostram a variação do p-valor de acordo com a probabilidade de referência escolhida. 
+
+O eixo X representa a probabilidade escolhida e o eixo Y representa o p-valor. Podemos perceber que para probabilidades mais altas o p-valor aumenta, o que é esperado dado que realmente não foi observada alteração na amostra (como a probabilidade era sempre 100%, quando a probabilidade de referência é 100% não há nenhuma diferença entre elas). Uma opção seria ser conservadora na escolha do valor de referência e escolher algo como 0.5 ou 0.8
+
+Novamente, é importante falar que pelo baixo tamanho de amostra a análise descritiva é mais informativa do que os testes estatísticos.
